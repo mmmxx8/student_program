@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:student_program/core/app_session.dart';
+import 'package:student_program/core/di/injection..dart';
+import 'package:student_program/domain/repositories/student_repository.dart';
 import 'package:student_program/presentation/confirmation_screen.dart';
-import '../main.dart';
 import 'student_details.dart';
 
 class FirstScreen extends StatefulWidget {
@@ -17,8 +18,11 @@ class _FirstScreenState extends State<FirstScreen> {
   final TextEditingController _nationalIdController = TextEditingController();
 
   bool _isButtonEnabled = false;
-  bool _isNationalIdValid = false; // Green checkmark state for National ID
+  bool _isNationalIdValid = false;
   final RegExp _egyptianPhoneRegExp = RegExp(r'^01[0125]\d{8}$');
+
+  // Inject repository using GetIt
+  final StudentRepository _studentRepository = getIt<StudentRepository>();
 
   @override
   void initState() {
@@ -31,37 +35,26 @@ class _FirstScreenState extends State<FirstScreen> {
   void _validateWhatsAppInput() {
     final text = _whatsappController.text;
     final isValid = _egyptianPhoneRegExp.hasMatch(text);
-
     if (isValid != _isButtonEnabled) {
-      setState(() {
-        _isButtonEnabled = isValid;
-      });
+      setState(() => _isButtonEnabled = isValid);
     }
   }
 
-  // Live database validation for National ID checkmark
   Future<void> _validateNationalIdInput() async {
     final nationalId = _nationalIdController.text.trim();
 
     if (nationalId.length == 14) {
-      final student = await studentRepository.getStudentByNationalId(
-        nationalId,
-      );
+      final student = await _studentRepository.getStudentByNationalId(nationalId);
       if (mounted) {
-        setState(() {
-          _isNationalIdValid = student != null;
-        });
+        setState(() => _isNationalIdValid = student != null);
       }
     } else {
       if (_isNationalIdValid) {
-        setState(() {
-          _isNationalIdValid = false;
-        });
+        setState(() => _isNationalIdValid = false);
       }
     }
   }
 
-  // 1. First trigger: Show WhatsApp confirmation dialog
   Future<void> _handleContinue() async {
     final whatsapp = _whatsappController.text.trim();
     final nationalId = _nationalIdController.text.trim();
@@ -85,7 +78,6 @@ class _FirstScreenState extends State<FirstScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                // Save session & proceed to logic after user confirms number
                 _processNavigation(whatsapp, nationalId);
               },
               child: const Text('تأكيد'),
@@ -96,16 +88,11 @@ class _FirstScreenState extends State<FirstScreen> {
     );
   }
 
-  // 2. Process DB lookup and Navigation after confirmation
   Future<void> _processNavigation(String whatsapp, String nationalId) async {
-    // Save WhatsApp number globally in AppSession
     AppSession().currentWhatsappNumber = whatsapp;
 
-    // Database check logic
     if (nationalId.length == 14) {
-      final existingStudent = await studentRepository.getStudentByNationalId(
-        nationalId,
-      );
+      final existingStudent = await _studentRepository.getStudentByNationalId(nationalId);
 
       if (!mounted) return;
 
@@ -137,10 +124,7 @@ class _FirstScreenState extends State<FirstScreen> {
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'الرقم القومي غير مسجل',
-            textAlign: TextAlign.right,
-          ),
+          title: const Text('الرقم القومي غير مسجل', textAlign: TextAlign.right),
           content: Text(
             'لم يتم العثور على طالب مرتبط بالرقم القومي ($nationalId).\nهل ترغب في إعادة كتابة الرقم أم استكمال البيانات؟',
             textAlign: TextAlign.right,
@@ -157,8 +141,7 @@ class _FirstScreenState extends State<FirstScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        StudentDetailsScreen(nationalId: nationalId),
+                    builder: (context) => StudentDetailsScreen(nationalId: nationalId),
                   ),
                 );
               },
@@ -189,7 +172,6 @@ class _FirstScreenState extends State<FirstScreen> {
             children: [
               const SizedBox(height: 20),
 
-              // WhatsApp Input
               TextField(
                 controller: _whatsappController,
                 keyboardType: TextInputType.phone,
@@ -204,7 +186,6 @@ class _FirstScreenState extends State<FirstScreen> {
 
               const SizedBox(height: 20),
 
-              // National ID Input with Live Green Checkmark
               TextField(
                 controller: _nationalIdController,
                 keyboardType: TextInputType.number,
@@ -225,7 +206,6 @@ class _FirstScreenState extends State<FirstScreen> {
 
               const Spacer(),
 
-              // Submit Button
               ElevatedButton(
                 onPressed: _isButtonEnabled ? _handleContinue : null,
                 style: ElevatedButton.styleFrom(

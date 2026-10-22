@@ -4,6 +4,10 @@ class AppSession {
   factory AppSession() => _instance;
   AppSession._internal();
 
-  // In-memory stored WhatsApp number
+  // In-memory stored values
   String? currentWhatsappNumber;
+
+  void clear() {
+    currentWhatsappNumber = null;
+  }
 }

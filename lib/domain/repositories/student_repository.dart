@@ -1,38 +1,43 @@
-import '../entities/student.dart';
+import 'package:student_program/domain/entities/local_lookup_entities.dart';
+import 'package:student_program/domain/entities/rowcase_entity.dart';
+import 'package:student_program/domain/entities/school_entity.dart';
+import 'package:student_program/domain/entities/student_certificate_entity.dart';
+import 'package:student_program/domain/entities/student_name_entity.dart';
+import 'package:student_program/domain/entities/student_score_entity.dart';
+
 
 abstract class StudentRepository {
-  // Existing methods...
-  Future<List<Student>> getAllStudents();
-  Future<Student?> getStudentByNationalId(String nationalId);
-  Future<void> saveStudent(Student student);
-
-  // Cascading distinct queries
-  Future<List<String>> getYears();
-  Future<List<String>> getEducationTypes({required String year});
-  Future<List<String>> getGovernorates({
-    required String year,
-    required String education,
-  });
-  Future<List<String>> getSchools({
-    required String year,
-    required String education,
-    required String governorate,
+  // --- Local Drift Queries ---
+  Future<List<SanaEntity>> getLocalYears();
+  Future<List<EdaraEntity>> getLocalEdaras();
+  Future<List<RowEntity>> getLocalRowsByYear(int idSana);
+  Future<void> seedLocalLookupTables({
+    required List<SanaEntity> years,
+    required List<EdaraEntity> edaras,
+    required List<RowEntity> rows,
   });
 
-  // Auto-complete names based on current dropdown selections
-  Future<List<String>> getMatchingNames({
-    required String year,
-    required String education,
-    required String governorate,
-    required String school,
-    required String query,
+  // --- Remote Supabase Queries ---
+  Future<StudentNameEntity?> getStudentByNationalId(String nationalId);
+  
+  Future<List<StudentNameEntity>> searchStudents({
+    required int idSana,
+    required int idEdara,
+    required int idRow,
+    int? idSchool,
+    int? idCase,
+    String? nameQuery,
   });
-  Future<Student?> getStudentByDetails({
-    required String name,
-    required String year,
-    required String education,
-    required String governorate,
-    required String school,
+
+  Future<List<SchoolEntity>> getSchoolsByCase(int idCase);
+  
+  Future<List<RowCaseEntity>> getCasesByRow({
+    required int idRow,
+    required int idSana,
   });
+
+  Future<List<StudentScoreEntity>> getStudentScores(int stuId);
+  
+  Future<StudentCertificateEntity?> getStudentCertificate(int stuId);
   Future<void> seedMockData();
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:student_program/core/di/injection..dart';
+import 'package:student_program/domain/entities/student_name_entity.dart';
+import 'package:student_program/domain/repositories/student_repository.dart';
 import 'package:student_program/presentation/payment.dart';
-import '../domain/entities/student.dart';
-import '../main.dart';
 
 class ConfirmationScreen extends StatelessWidget {
   final String nationalId;
@@ -13,13 +14,15 @@ class ConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final studentRepository = getIt<StudentRepository>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('تأكيد البيانات'),
         centerTitle: true,
       ),
       body: SafeArea(
-        child: FutureBuilder<Student?>(
+        child: FutureBuilder<StudentNameEntity?>(
           future: studentRepository.getStudentByNationalId(nationalId),
           builder: (context, snapshot) {
             // 1. Loading State
@@ -106,6 +109,13 @@ class ConfirmationScreen extends StatelessWidget {
                         const Divider(height: 20),
                         _buildDetailRow(
                           context,
+                          label: 'رقم الجلوس :',
+                          value: student.seatNumber,
+                          icon: Icons.confirmation_number_outlined,
+                        ),
+                        const Divider(height: 20),
+                        _buildDetailRow(
+                          context,
                           label: 'الرقم القومي :',
                           value: student.nationalId ?? nationalId,
                           icon: Icons.badge_outlined,
@@ -113,38 +123,40 @@ class ConfirmationScreen extends StatelessWidget {
                         const Divider(height: 20),
                         _buildDetailRow(
                           context,
-                          label: 'السنة الدراسية :',
-                          value: student.year,
+                          label: 'كود السنة :',
+                          value: student.idSana.toString(),
                           icon: Icons.calendar_today_outlined,
                         ),
                         const Divider(height: 20),
                         _buildDetailRow(
                           context,
-                          label: 'نوع التعليم :',
-                          value: student.education,
-                          icon: Icons.school_outlined,
+                          label: 'المجموع الكلي :',
+                          value: '${student.total}',
+                          icon: Icons.grade_outlined,
                         ),
                         const Divider(height: 20),
                         _buildDetailRow(
                           context,
-                          label: 'المحافظة :',
-                          value: student.governorate,
-                          icon: Icons.location_on_outlined,
+                          label: 'الحالة :',
+                          value: student.pf.toUpperCase() == 'PASS' ? 'ناجح' : 'راسب',
+                          icon: Icons.verified_outlined,
                         ),
-                        const Divider(height: 20),
-                        _buildDetailRow(
-                          context,
-                          label: 'المدرسة :',
-                          value: student.school,
-                          icon: Icons.account_balance_outlined,
-                        ),
+                        if (student.systemType != null) ...[
+                          const Divider(height: 20),
+                          _buildDetailRow(
+                            context,
+                            label: 'نظام الدراسة :',
+                            value: student.systemType!,
+                            icon: Icons.school_outlined,
+                          ),
+                        ],
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 30),
 
-                  // Navigate to PaymentScreen on Click
+                  // Navigate to PaymentScreen
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.push(

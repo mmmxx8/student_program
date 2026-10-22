@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../domain/entities/student.dart';
+import 'package:student_program/domain/entities/student_name_entity.dart';
 
 class PaymentScreen extends StatelessWidget {
-  final Student student;
+  final StudentNameEntity student;
 
   const PaymentScreen({
     super.key,

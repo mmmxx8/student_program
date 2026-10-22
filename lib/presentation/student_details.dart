@@ -1,198 +1,120 @@
 import 'package:flutter/material.dart';
+import 'package:student_program/core/di/injection..dart';
+import 'package:student_program/domain/entities/local_lookup_entities.dart';
+import 'package:student_program/domain/entities/student_name_entity.dart';
+import 'package:student_program/domain/repositories/student_repository.dart';
 import 'package:student_program/presentation/confirmation_screen.dart';
-import '../main.dart';
 
 class StudentDetailsScreen extends StatefulWidget {
   final String? nationalId;
 
-  const StudentDetailsScreen({
-    super.key,
-    this.nationalId,
-  });
+  const StudentDetailsScreen({super.key, this.nationalId});
 
   @override
   State<StudentDetailsScreen> createState() => _StudentDetailsScreenState();
 }
 
 class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final FocusNode _nameFocusNode = FocusNode();
+  final StudentRepository _studentRepository = getIt<StudentRepository>();
 
-  // Selected dropdown values
-  String? _selectedYear;
-  String? _selectedEducation;
-  String? _selectedGovernorate;
-  String? _selectedSchool;
+  // Selected Typed Entities
+  SanaEntity? _selectedSana;
+  EdaraEntity? _selectedEdara;
+  RowEntity? _selectedRow;
+  StudentNameEntity? _selectedStudent;
 
-  // Dynamic dropdown options
-  List<String> _years = [];
-  List<String> _educationTypes = [];
-  List<String> _governorates = [];
-  List<String> _schools = [];
+  // Dropdown Options Lists
+  List<SanaEntity> _years = [];
+  List<EdaraEntity> _edaras = [];
+  List<RowEntity> _rows = [];
 
   bool _isChecking = false;
-  bool _isNameValid = false; // Controls green checkmark icon visibility
+  bool _isNameValid = false;
 
   @override
   void initState() {
     super.initState();
-    _loadYears();
+    _loadInitialData();
   }
 
-  // Step 1: Fetch initial unique years
-  Future<void> _loadYears() async {
-    final years = await studentRepository.getYears();
+  // Normalize Arabic text for precise search
+  String _normalizeArabic(String text) {
+    return text
+        .trim()
+        .replaceAll(RegExp(r'[\u064B-\u0652]'), '') // Strip Tashkeel
+        .replaceAll(RegExp(r'[أإآ]'), 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه');
+  }
+
+  Future<void> _loadInitialData() async {
+    final years = await _studentRepository.getLocalYears();
+    final edaras = await _studentRepository.getLocalEdaras();
     setState(() {
       _years = years;
+      _edaras = edaras;
     });
   }
 
-  // Step 2: Fetch education types matching selected year
-  Future<void> _onYearChanged(String? year) async {
+  Future<void> _onYearChanged(SanaEntity? sana) async {
     setState(() {
-      _selectedYear = year;
-      _selectedEducation = null;
-      _selectedGovernorate = null;
-      _selectedSchool = null;
-      _nameController.clear();
+      _selectedSana = sana;
+      _selectedRow = null;
+      _selectedStudent = null;
       _isNameValid = false;
-      _educationTypes = [];
-      _governorates = [];
-      _schools = [];
+      _rows = [];
     });
 
-    if (year != null) {
-      final list = await studentRepository.getEducationTypes(year: year);
-      setState(() => _educationTypes = list);
+    if (sana != null) {
+      final rows = await _studentRepository.getLocalRowsByYear(sana.idSana);
+      setState(() => _rows = rows);
     }
   }
 
-  // Step 3: Fetch governorates matching year + education
-  Future<void> _onEducationChanged(String? education) async {
+  void _onEdaraChanged(EdaraEntity? edara) {
     setState(() {
-      _selectedEducation = education;
-      _selectedGovernorate = null;
-      _selectedSchool = null;
-      _nameController.clear();
+      _selectedEdara = edara;
+      _selectedStudent = null;
       _isNameValid = false;
-      _governorates = [];
-      _schools = [];
     });
-
-    if (_selectedYear != null && education != null) {
-      final list = await studentRepository.getGovernorates(
-        year: _selectedYear!,
-        education: education,
-      );
-      setState(() => _governorates = list);
-    }
   }
 
-  // Step 4: Fetch schools matching year + education + governorate
-  Future<void> _onGovernorateChanged(String? governorate) async {
+  void _onRowChanged(RowEntity? row) {
     setState(() {
-      _selectedGovernorate = governorate;
-      _selectedSchool = null;
-      _nameController.clear();
+      _selectedRow = row;
+      _selectedStudent = null;
       _isNameValid = false;
-      _schools = [];
     });
-
-    if (_selectedYear != null &&
-        _selectedEducation != null &&
-        governorate != null) {
-      final list = await studentRepository.getSchools(
-        year: _selectedYear!,
-        education: _selectedEducation!,
-        governorate: governorate,
-      );
-      setState(() => _schools = list);
-    }
-  }
-
-  // Asynchronous validation check to toggle the green check icon
-  Future<void> _validateCurrentName(String name) async {
-    if (name.trim().isEmpty || !isDropdownsComplete) {
-      if (_isNameValid) setState(() => _isNameValid = false);
-      return;
-    }
-
-    final student = await studentRepository.getStudentByDetails(
-      name: name,
-      year: _selectedYear!,
-      education: _selectedEducation!,
-      governorate: _selectedGovernorate!,
-      school: _selectedSchool!,
-    );
-
-    if (mounted) {
-      setState(() {
-        _isNameValid = student != null;
-      });
-    }
   }
 
   bool get isDropdownsComplete =>
-      _selectedYear != null &&
-      _selectedEducation != null &&
-      _selectedGovernorate != null &&
-      _selectedSchool != null;
+      _selectedSana != null && _selectedEdara != null && _selectedRow != null;
 
-  bool get _isFormValid =>
-      _nameController.text.trim().isNotEmpty && isDropdownsComplete;
+  // FIXED: Form is valid as long as dropdowns are selected and a student is picked
+  bool get _isFormValid => isDropdownsComplete && _selectedStudent != null;
 
-  // Handles checking DB existence before moving forward
   Future<void> _handleVerificationAndSubmit() async {
+    if (_selectedStudent == null) return;
+
     setState(() => _isChecking = true);
-
-    final name = _nameController.text.trim();
-
-    final existingStudent = await studentRepository.getStudentByDetails(
-      name: name,
-      year: _selectedYear!,
-      education: _selectedEducation!,
-      governorate: _selectedGovernorate!,
-      school: _selectedSchool!,
-    );
-
+    await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     setState(() => _isChecking = false);
 
-    if (existingStudent != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ConfirmationScreen(
-            nationalId: existingStudent.nationalId ?? widget.nationalId ?? '',
-          ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ConfirmationScreen(
+          nationalId: _selectedStudent!.nationalId ?? widget.nationalId ?? '',
         ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'البيانات المدخلة غير موجودة بقاعدة البيانات. برجاء التأكد من صحتها.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _nameFocusNode.dispose();
-    super.dispose();
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('بيانات الطالب'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('بيانات الطالب'), centerTitle: true),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
@@ -200,109 +122,121 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Year Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedYear,
+              DropdownButtonFormField<SanaEntity>(
+                value: _selectedSana,
                 decoration: const InputDecoration(labelText: 'السنة :'),
                 hint: const Text('اختر السنة'),
                 items: _years
-                    .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.sana.toString()),
+                      ),
+                    )
                     .toList(),
                 onChanged: _onYearChanged,
               ),
               const SizedBox(height: 16),
 
-              // 2. Education Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedEducation,
-                decoration: const InputDecoration(labelText: 'نوع التعليم :'),
-                hint: const Text('اختر نوع التعليم'),
-                items: _educationTypes
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              // 2. Edara Dropdown
+              DropdownButtonFormField<EdaraEntity>(
+                value: _selectedEdara,
+                decoration: const InputDecoration(labelText: 'الإدارة :'),
+                hint: const Text('اختر الإدارة'),
+                items: _edaras
+                    .map(
+                      (e) => DropdownMenuItem(value: e, child: Text(e.edara)),
+                    )
                     .toList(),
-                onChanged: _selectedYear != null ? _onEducationChanged : null,
+                onChanged: _selectedSana != null ? _onEdaraChanged : null,
               ),
               const SizedBox(height: 16),
 
-              // 3. Governorate Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedGovernorate,
-                decoration: const InputDecoration(labelText: 'المحافظة :'),
-                hint: const Text('اختر المحافظة'),
-                items: _governorates
-                    .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+              // 3. Row Dropdown
+              DropdownButtonFormField<RowEntity>(
+                value: _selectedRow,
+                decoration: const InputDecoration(labelText: 'مسار التعليم :'),
+                hint: const Text('اختر مسار التعليم'),
+                items: _rows
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r.row)))
                     .toList(),
-                onChanged:
-                    _selectedEducation != null ? _onGovernorateChanged : null,
+                onChanged: _selectedEdara != null ? _onRowChanged : null,
               ),
               const SizedBox(height: 16),
 
-              // 4. School Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedSchool,
-                decoration: const InputDecoration(labelText: 'المدرسة :'),
-                hint: const Text('اختر المدرسة'),
-                items: _schools
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: _selectedGovernorate != null
-                    ? (val) => setState(() {
-                          _selectedSchool = val;
-                          _nameController.clear();
-                          _isNameValid = false;
-                        })
-                    : null,
-              ),
-              const SizedBox(height: 16),
-
-              // 5. Name Autocomplete Field with Live Validation Checkmark
+              // 4. Autocomplete Search
               LayoutBuilder(
                 builder: (context, constraints) {
-                  return Autocomplete<String>(
-                    initialValue: TextEditingValue(text: _nameController.text),
+                  return Autocomplete<StudentNameEntity>(
+                    displayStringForOption: (StudentNameEntity option) =>
+                        option.name,
                     optionsBuilder: (TextEditingValue textEditingValue) async {
                       if (!isDropdownsComplete) {
-                        return const Iterable<String>.empty();
+                        return const Iterable<StudentNameEntity>.empty();
                       }
 
-                      return await studentRepository.getMatchingNames(
-                        year: _selectedYear!,
-                        education: _selectedEducation!,
-                        governorate: _selectedGovernorate!,
-                        school: _selectedSchool!,
-                        query: textEditingValue.text,
-                      );
+                      final candidates = await _studentRepository
+                          .searchStudents(
+                            idSana: _selectedSana!.idSana,
+                            idEdara: _selectedEdara!.idEdara,
+                            idRow: _selectedRow!.idRow,
+                          );
+
+                      final query = textEditingValue.text.trim();
+
+                      if (query.isEmpty) {
+                        return candidates;
+                      }
+
+                      final cleanQuery = _normalizeArabic(query);
+
+                      return candidates.where((student) {
+                        final cleanName = _normalizeArabic(student.name);
+                        return cleanName.contains(cleanQuery);
+                      });
                     },
-                    onSelected: (String selection) {
-                      _nameController.text = selection;
-                      _validateCurrentName(selection);
+                    onSelected: (StudentNameEntity selection) {
+                      setState(() {
+                        _selectedStudent = selection;
+                        _isNameValid = true;
+                      });
                     },
                     fieldViewBuilder:
                         (context, controller, focusNode, onEditingComplete) {
-                      controller.addListener(() {
-                        if (_nameController.text != controller.text) {
-                          _nameController.text = controller.text;
-                          _validateCurrentName(controller.text);
-                        }
-                      });
-
-                      return TextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        enabled: isDropdownsComplete,
-                        decoration: InputDecoration(
-                          labelText: 'الاسم :',
-                          hintText: isDropdownsComplete
-                              ? 'اختر اسم الطالب أو ابدأ بالكتابة...'
-                              : 'قم باختيار الاختيارات أولاً',
-                          suffixIcon: _isNameValid
-                              ? Icon(
-                                  Icons.check_circle,
-                                  color: Theme.of(context).colorScheme.secondary,
-                                )
-                              : null,
-                        ),
-                      );
-                    },
+                          return TextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            enabled: isDropdownsComplete,
+                            onTap: () {
+                              if (controller.text.isEmpty) {
+                                controller.text = '';
+                              }
+                            },
+                            onChanged: (text) {
+                              if (_selectedStudent != null &&
+                                  _selectedStudent!.name != text) {
+                                setState(() {
+                                  _selectedStudent = null;
+                                  _isNameValid = false;
+                                });
+                              }
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'الاسم :',
+                              hintText: isDropdownsComplete
+                                  ? 'اضغط هنا لعرض الأسماء أو ابدأ بالكتابة...'
+                                  : 'قم باختيار السنة والإدارة والمسار أولاً',
+                              suffixIcon: _isNameValid
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                    )
+                                  : null,
+                            ),
+                          );
+                        },
                     optionsViewBuilder: (context, onSelected, options) {
                       return Align(
                         alignment: Alignment.topRight,
@@ -321,8 +255,13 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
                                 final option = options.elementAt(index);
                                 return ListTile(
                                   title: Text(
-                                    option,
+                                    option.name,
                                     textAlign: TextAlign.right,
+                                  ),
+                                  subtitle: Text(
+                                    'رقم الجلوس: ${option.seatNumber}',
+                                    textAlign: TextAlign.right,
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                   onTap: () => onSelected(option),
                                 );
@@ -335,7 +274,6 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
                   );
                 },
               ),
-
               const SizedBox(height: 30),
 
               // Submit Button
