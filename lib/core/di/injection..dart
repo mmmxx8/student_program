@@ -7,8 +7,8 @@ import 'package:student_program/domain/repositories/student_repository.dart';
 
 final getIt = GetIt.instance;
 
-const String _kDummySupabaseUrl = 'https://hjqcncrqyotgjidbzzmx.supabase.co';
-const String _kDummySupabaseKey = 'sb_publishable_ZMCjWXxPBetSDFyPo0Vibg_b9w6sOKF';
+const String _kSupabaseUrl = 'https://hjqcncrqyotgjidbzzmx.supabase.co';
+const String _kSupabaseKey = 'sb_publishable_ZMCjWXxPBetSDFyPo0Vibg_b9w6sOKF';
 
 Future<void> initDependencies() async {
   // 1. Register Local Drift Database Singleton (SQLite)
@@ -19,8 +19,8 @@ Future<void> initDependencies() async {
   SupabaseClient? supabaseClient;
   try {
     await Supabase.initialize(
-      url: _kDummySupabaseUrl,
-      anonKey: _kDummySupabaseKey,
+      url: _kSupabaseUrl,
+      anonKey: _kSupabaseKey,
     );
     supabaseClient = Supabase.instance.client;
   } catch (e) {
@@ -30,7 +30,7 @@ Future<void> initDependencies() async {
 
   // Define client instance explicitly
   final SupabaseClient client =
-      supabaseClient ?? SupabaseClient(_kDummySupabaseUrl, _kDummySupabaseKey);
+      supabaseClient ?? SupabaseClient(_kSupabaseUrl, _kSupabaseKey);
 
   // Register SupabaseClient in GetIt
   getIt.registerSingleton<SupabaseClient>(client);

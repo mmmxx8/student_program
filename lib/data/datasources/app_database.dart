@@ -218,6 +218,9 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'student_program.sqlite'));
+    if (!await dbFolder.exists()) {
+      await dbFolder.create(recursive: true);
+    }
     return NativeDatabase.createInBackground(file);
   });
 }

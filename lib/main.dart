@@ -4,6 +4,7 @@ import 'package:student_program/core/app_theme.dart';
 import 'package:student_program/core/di/injection..dart';
 import 'package:student_program/presentation/first_screen.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
