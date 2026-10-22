@@ -35,21 +35,21 @@ class StudentNameEntity {
 
   factory StudentNameEntity.fromSupabase(Map<String, dynamic> json) {
     return StudentNameEntity(
-      stuId: json['stu_id'] as int,
-      pf: json['PF'] as String? ?? 'pass',
-      idSana: json['idsana'] as int,
-      idEdara: json['idedara'] as int,
-      idRow: json['idrow'] as int,
-      idSchool: json['idschool'] as int?,
-      idCase: json['idcase'] as int?,
-      total: (json['total'] as num).toDouble(),
-      nationalId: json['nat'] as String?,
-      seatNumber: json['no'].toString(),
-      name: json['name'] as String,
-      systemType: json['system_type'] as String?,
-      round: json['round'] as String?,
-      maxTotal: (json['max_total'] as num?)?.toDouble(),
-      translation: json['translation'] as String?,
+      stuId: json['Stu_id'] != null ? (json['Stu_id'] as num).toInt() : 0,
+      pf: json['PF'] as String? ?? '',
+      idSana: json['idsana'] != null ? (json['idsana'] as num).toInt() : 0,
+      idEdara: json['idedara'] != null ? (json['idedara'] as num).toInt() : 0,
+      idRow: json['idrow'] != null ? (json['idrow'] as num).toInt() : 0,
+      idSchool: json['idschool'] != null
+          ? (json['idschool'] as num).toInt()
+          : null,
+      idCase: json['idcase'] != null ? (json['idcase'] as num).toInt() : null,
+      total: json['Total'] != null ? (json['Total'] as num).toDouble() : 0.0,
+      nationalId: json['nat']?.toString(),
+      seatNumber: json['no']?.toString() ?? '',
+      name: json['name'] as String? ?? '',
+      systemType: json['noaa'] as String?,
+      round: json['hala'] as String?,
     );
   }
 }

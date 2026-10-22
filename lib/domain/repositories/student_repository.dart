@@ -39,5 +39,4 @@ abstract class StudentRepository {
   Future<List<StudentScoreEntity>> getStudentScores(int stuId);
   
   Future<StudentCertificateEntity?> getStudentCertificate(int stuId);
-  Future<void> seedMockData();
 }

@@ -7,33 +7,27 @@ import 'package:student_program/presentation/payment.dart';
 class ConfirmationScreen extends StatelessWidget {
   final String nationalId;
 
-  const ConfirmationScreen({
-    super.key,
-    required this.nationalId,
-  });
+  const ConfirmationScreen({super.key, required this.nationalId});
 
   @override
   Widget build(BuildContext context) {
     final studentRepository = getIt<StudentRepository>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تأكيد البيانات'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('تأكيد البيانات'), centerTitle: true),
       body: SafeArea(
         child: FutureBuilder<StudentNameEntity?>(
           future: studentRepository.getStudentByNationalId(nationalId),
           builder: (context, snapshot) {
             // 1. Loading State
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             // 2. Error or Record Not Found State
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data == null) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -74,8 +68,8 @@ class ConfirmationScreen extends StatelessWidget {
                   Text(
                     'بيانات الطالب',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.right,
                   ),
                   const SizedBox(height: 12),
@@ -138,7 +132,11 @@ class ConfirmationScreen extends StatelessWidget {
                         _buildDetailRow(
                           context,
                           label: 'الحالة :',
-                          value: student.pf.toUpperCase() == 'PASS' ? 'ناجح' : 'راسب',
+                          value:
+                              (student.pf == 'P' ||
+                                  student.pf.toUpperCase() == 'PASS')
+                              ? 'ناجح'
+                              : 'راسب',
                           icon: Icons.verified_outlined,
                         ),
                         if (student.systemType != null) ...[
@@ -162,9 +160,7 @@ class ConfirmationScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PaymentScreen(
-                            student: student,
-                          ),
+                          builder: (context) => PaymentScreen(student: student),
                         ),
                       );
                     },
@@ -199,11 +195,7 @@ class ConfirmationScreen extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 22,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 10),
         Text(
           label,
@@ -218,10 +210,7 @@ class ConfirmationScreen extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.left,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
         ),
       ],
